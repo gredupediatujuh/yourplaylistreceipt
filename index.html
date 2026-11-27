@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Gema Rasa — Playlist Receipt Generator</title>
+  <link href="https://fonts.googleapis.com/css2?family=Courier+Prime:ital,wght@0,400;0,700;1,400&family=Plus+Jakarta+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <style>
+    :root {
+      --bg-color: #f4f1ea;
+      --card-bg: #ffffff;
+      --text-main: #1f1f1f;
+      --accent: #2c3e2e;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      background-color: var(--bg-color);
+      color: var(--text-main);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 24px 16px;
+      min-height: 100vh;
+    }
+
+    .container { max-width: 440px; width: 100%; }
+    .header-app { text-align: center; margin-bottom: 20px; }
+    .header-app h1 { font-size: 1.4rem; font-weight: 700; color: var(--accent); }
+    .header-app p { font-size: 0.85rem; color: #555; margin-top: 4px; }
+
+    .form-box {
+      background: var(--card-bg);
+      padding: 20px;
+      border-radius: 14px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.06);
+      margin-bottom: 24px;
+    }
+
+    .form-group { margin-bottom: 14px; }
+    label { display: block; font-size: 0.8rem; font-weight: 600; margin-bottom: 6px; color: #333; }
+
+    input, select {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      font-family: inherit;
+      font-size: 0.9rem;
+    }
+
+    input:focus, select:focus { outline: none; border-color: var(--accent); }
+    .song-row { display: flex; gap: 8px; margin-bottom: 8px; }
+
+    .btn-download {
+      width: 100%;
+      padding: 12px;
+      border: none;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 0.95rem;
+      cursor: pointer;
+      background-color: #111;
+      color: #fff;
+      margin-top: 18px;
+      transition: 0.2s;
+    }
+    .btn-download:hover { opacity: 0.9; }
+
+    .receipt-wrapper { display: flex; justify-content: center; }
+
+    #receipt-card {
+      width: 340px;
+      background-color: #fcfbf9;
+      background-image: url("data:image/svg+xml,%3Csvg width='12' height='12' viewBox='0 0 12 12' xmlns='http://www.w3.org/2000/svg'%3E%3Ccircle cx='1' cy='1' r='1' fill='rgba(0,0,0,0.06)'/%3E%3C/svg%3E");
+      background-size: 12px 12px;
+      padding: 28px 22px;
+      font-family: 'Courier Prime', monospace;
+      color: #1a1a1a;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+      position: relative;
+    }
+
+    #receipt-card::before, #receipt-card::after {
+      content: "";
+      position: absolute;
+      left: 0;
+      width: 100%;
+      height: 8px;
+      background-image: url("data:image/svg+xml,%3Csvg width='16' height='8' viewBox='0 0 16 8' xmlns='http://www.w3.org/2000/svg'%3E%3Cpolygon points='8,0 16,8 0,8' fill='%23fcfbf9'/%3E%3C/svg%3E");
+      background-size: 16px 8px;
+      background-repeat: repeat-x;
+    }
+    #receipt-card::before { top: -8px; }
+    #receipt-card::after { bottom: -8px; transform: rotate(180deg); }
+
+    .r-center { text-align: center; }
+    .r-title { font-size: 1.25rem; font-weight: 700; letter-spacing: 1px; }
+    .r-subtitle { font-size: 0.72rem; margin-top: 2px; color: #444; }
+    .r-divider { border-top: 1px dashed #333; margin: 12px 0; }
+    .r-meta { font-size: 0.75rem; line-height: 1.5; }
+
+    .r-table { width: 100%; border-collapse: collapse; font-size: 0.78rem; margin: 8px 0; }
+    .r-table th { text-align: left; border-bottom: 1px dashed #333; padding-bottom: 4px; font-size: 0.72rem; }
+    .r-table td { padding: 6px 0; vertical-align: top; }
+    .r-qty { width: 28px; }
+    .r-amt { text-align: right; width: 65px; }
+
+    .r-summary { font-size: 0.75rem; line-height: 1.6; }
+    .r-row-flex { display: flex; justify-content: space-between; }
+
+    .r-quote {
+      font-size: 0.72rem;
+      font-style: italic;
+      text-align: center;
+      margin-top: 12px;
+      line-height: 1.4;
+      color: #333;
+    }
+
+    .barcode {
+      margin-top: 14px;
+      height: 32px;
+      background: repeating-linear-gradient(
+        90deg, #1a1a1a, #1a1a1a 2px, transparent 2px, transparent 4px,
+        #1a1a1a 4px, #1a1a1a 5px, transparent 5px, transparent 8px
+      );
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <div class="header-app">
+      <h1>GEMA RASA</h1>
+      <p>Pilih kategori playlist & unduh nota lagumu</p>
+    </div>
+
+    <!-- Form Pengunjung -->
+    <div class="form-box">
+      <div class="form-group">
+        <label>Nama / Inisial Pengunjung</label>
+        <input type="text" id="visitorName" placeholder="Contoh: Raka / Pengunjung #12" oninput="updateReceipt()" />
+      </div>
+
+      <div class="form-group">
+        <label>Pilih Playlist yang Kamu Isi</label>
+        <select id="playlistName" onchange="updateReceipt()">
+          <option value="ISTIRAHAT SEJENAK">1. Istirahat Sejenak</option>
+          <option value="RUANG AMAN UNTUK BERBAGI RASA">2. Ruang Aman untuk Berbagi Rasa</option>
+          <option value="PENYEMANGAT HARI">3. Penyemangat Hari</option>
+          <option value="PRODUCTIVE DAYS">4. Productive Days</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label>Lagu yang Kamu Tambahkan (Maks. 3 Lagu)</label>
+        <div class="song-row">
+          <input type="text" id="song1" placeholder="Judul Lagu 1 - Penyanyi" oninput="updateReceipt()" />
+        </div>
+        <div class="song-row">
+          <input type="text" id="song2" placeholder="Judul Lagu 2 - Penyanyi (Opsional)" oninput="updateReceipt()" />
+        </div>
+        <div class="song-row">
+          <input type="text" id="song3" placeholder="Judul Lagu 3 - Penyanyi (Opsional)" oninput="updateReceipt()" />
+        </div>
+      </div>
+    </div>
+
+    <!-- Preview Struk / Nota -->
+    <div class="receipt-wrapper">
+      <div id="receipt-card">
+        <div class="r-center">
+          <div class="r-title">GEMA RASA</div>
+          <div class="r-subtitle">GREDUPEDIA #7 2026</div>
+          <div class="r-subtitle">COLLABORATIVE PLAYLIST ARCHIVE</div>
+        </div>
+
+        <div class="r-divider"></div>
+
+        <div class="r-meta">
+          <div>VISITOR  : <span id="outName">ANONIM</span></div>
+          <div>DATE     : <span id="outDate"></span></div>
+          <div>PLAYLIST : <span id="outPlaylist">ISTIRAHAT SEJENAK</span></div>
+        </div>
+
+        <div class="r-divider"></div>
+
+        <table class="r-table">
+          <thead>
+            <tr>
+              <th class="r-qty">NO</th>
+              <th>TRACK / ARTIST</th>
+              <th class="r-amt">STATUS</th>
+            </tr>
+          </thead>
+          <tbody id="outSongs">
+            <tr>
+              <td class="r-qty">01</td>
+              <td>Rehat - Kunto Aji</td>
+              <td class="r-amt">ADDED</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="r-divider"></div>
+
+        <div class="r-summary">
+          <div class="r-row-flex"><span>BEBAN PIKIRAN</span><span>0.00 (LUNAS)</span></div>
+          <div class="r-row-flex"><span>ENERGI & HARAPAN</span><span>FULL CHARGED</span></div>
+          <div class="r-row-flex" style="font-weight:700; margin-top:4px;">
+            <span>TOTAL RASA</span><span>TERVALIDASI</span>
+          </div>
+        </div>
+
+        <div class="r-divider"></div>
+
+        <div class="r-quote" id="outQuote">
+          "Waktunya rehat sejenak dari rutinitas. Biarkan alunan nada menemani malam dan ceritamu hari ini."
+        </div>
+
+        <div style="text-align: center; margin-top: 14px;">
+       <img 
+         src="data:image/png;base64,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PiNHjjxz5gzuNPo5efJkXFwcLiUZQM+ePQsKCvAFs9w2hJe/umMAE5lSYGDg1KlTS0tLcdfxrbKysmnTpuHCkZEEBQVFRUXJoXy6xauvvtqrVy8sIj0wgIlMLCQkJCUl5dy5c7gDtTy5BE9KSjLpo42IjIABTNQaPP/889nZ2T64c9bdu3dzcnL4hjOR50aOHIk7mCMpwB5vWL16Nc5J0dDQwD9PEDVb165dZ8+efeDAAa/fP6u2tnb//v3JycldunTBuRKRWyIiIqqqqnBns5FfSQH2eIN28B8/fhwbiMh1YWFhCQkJ27ZtKy4udvuyWBqLioo2btw4ZcoUI9/8iMi85IwZdzwb+RVWe092djbOz0LO3QcPHozVROSekJAQ2aPk4nXt2rWZmZlHjhw5e/ZseXm5dX+7du1amUVpaenRo0elYNWqVSkpKbGxsfz7LpEPxMfHFxQU2J8CLv+Q/8oPsc6rgoKCli5dWlJSYn/kRkVFRW5u7tNPP42lREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREZvI/L9NVuM39BrgAAAAASUVORK5CYII=" 
+         alt="Spotify Profile Code" 
+         style="width: 210px; height: auto; border-radius: 6px;" 
+       />
+     </div>
+
+        <div class="r-center r-subtitle" style="margin-top:6px;">THANK YOU FOR SHARING YOUR SOUND</div>
+      </div>
+    </div>
+
+    <button class="btn-download" onclick="downloadReceipt()">Simpan Nota (Download PNG)</button>
+  </div>
+
+  <script>
+    const now = new Date();
+    document.getElementById('outDate').innerText = now.toLocaleDateString('id-ID', {
+      day: '2-digit', month: 'short', year: 'numeric'
+    }).toUpperCase();
+
+    const playlistQuotes = {
+      "ISTIRAHAT SEJENAK": "\"Waktunya rehat sejenak dari rutinitas. Biarkan alunan nada menemani malam dan ceritamu hari ini.\"",
+      "RUANG AMAN UNTUK BERBAGI RASA": "\"Tidak apa-apa merasa lelah atau sedih. Semoga setelah berbagi rasa di sini, hatimu terasa jauh lebih plong.\"",
+      "PENYEMANGAT HARI": "\"Semoga energi positif dari lagu-lagu ini membuat langkah dan perjalananmu hari ini terasa lebih seru!\"",
+      "PRODUCTIVE DAYS": "\"Selamat fokus dan berkarya! Semoga setiap ketukan nada membantu ide-ide terbaikmu mengalir lancar.\""
+    };
+
+    function updateReceipt() {
+      const name = document.getElementById('visitorName').value.trim();
+      const playlist = document.getElementById('playlistName').value;
+      const s1 = document.getElementById('song1').value.trim();
+      const s2 = document.getElementById('song2').value.trim();
+      const s3 = document.getElementById('song3').value.trim();
+
+      document.getElementById('outName').innerText = name ? name.toUpperCase() : "ANONIM";
+      document.getElementById('outPlaylist').innerText = playlist;
+      document.getElementById('outQuote').innerText = playlistQuotes[playlist];
+
+      const songs = [s1, s2, s3].filter(s => s !== "");
+      const tbody = document.getElementById('outSongs');
+      tbody.innerHTML = "";
+
+      if (songs.length === 0) {
+        tbody.innerHTML = `
+          <tr>
+            <td class="r-qty">01</td>
+            <td>Rehat - Kunto Aji</td>
+            <td class="r-amt">ADDED</td>
+          </tr>`;
+      } else {
+        songs.forEach((song, idx) => {
+          const num = String(idx + 1).padStart(2, '0');
+          tbody.innerHTML += `
+            <tr>
+              <td class="r-qty">${num}</td>
+              <td>${song}</td>
+              <td class="r-amt">ADDED</td>
+            </tr>`;
+        });
+      }
+    }
+
+    function downloadReceipt() {
+  const card = document.getElementById('receipt-card');
+  html2canvas(card, { 
+    scale: 3, 
+    useCORS: true, 
+    backgroundColor: null 
+  }).then(canvas => {
+    const link = document.createElement('a');
+    link.download = 'Gema-Rasa-Playlist-Receipt.png';
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+  });
+    }
+  </script>
+</body>
+</html>
